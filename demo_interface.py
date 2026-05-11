@@ -14,8 +14,10 @@
 
 """This file stores the Dash HTML layout for the app."""
 from __future__ import annotations
+from enum import EnumMeta
 
 from dash import dash_table, dcc, html
+import dash_mantine_components as dmc
 
 from demo_configs import (
     DESCRIPTION,
@@ -31,6 +33,8 @@ from demo_configs import (
 )
 from src.utils import COL_IDS
 
+THEME_COLOR = "#2d4376"
+
 
 def slider(label: str, id: str, config: dict) -> html.Div:
     """Slider element for value selection.
@@ -38,54 +42,148 @@ def slider(label: str, id: str, config: dict) -> html.Div:
     Args:
         label: The title that goes above the slider.
         id: A unique selector for this element.
-        config: A dictionary of slider configerations, see dcc.Slider Dash docs.
+        config: A dictionary of slider configurations, see dmc.Slider Dash Mantine docs.
     """
     return html.Div(
         className="slider-wrapper",
         children=[
-            html.Label(label),
-            dcc.Slider(
+            html.Label(label, htmlFor=id),
+            dmc.Slider(
                 id=id,
                 className="slider",
                 **config,
-                marks={
-                    config["min"]: str(config["min"]),
-                    config["max"]: str(config["max"]),
-                },
-                tooltip={
-                    "placement": "bottom",
-                    "always_visible": True,
-                },
+                marks=[
+                    {"value": config["min"], "label": f'{config["min"]}'},
+                    {"value": config["max"], "label": f'{config["max"]}'},
+                ],
+                labelAlwaysOn=True,
+                thumbLabel=f"{label} slider",
+                color=THEME_COLOR,
             ),
         ],
     )
 
 
 def range_slider(label: str, id: str, config: dict) -> html.Div:
-    """Range slider element for value selection."""
+    """Range slider element for value selection.
+
+    Args:
+        label: The title that goes above the range slider.
+        id: A unique selector for this element.
+        config: A dictionary of range slider configurations, see dmc.RangeSlider Dash Mantine docs.
+    """
     return html.Div(
-        className="range-slider",
+        className="rangeslider-wrapper",
         children=[
-            html.Label(label),
-            dcc.RangeSlider(
+            html.Label(label, htmlFor=id),
+            dmc.RangeSlider(
                 id=id,
+                className="slider",
                 **config,
-                marks={
-                    config["min"]: str(config["min"]),
-                    config["max"]: str(config["max"]),
-                },
-                tooltip={
-                    "placement": "bottom",
-                    "always_visible": True,
-                },
+                marks=[
+                    {"value": config["min"], "label": f'{config["min"]}'},
+                    {"value": config["max"], "label": f'{config["max"]}'},
+                ],
+                labelAlwaysOn=True,
+                thumbFromLabel=f"{label} slider start",
+                thumbToLabel=f"{label} slider end",
+                color=THEME_COLOR,
+            )
+        ]
+    )
+
+
+def dropdown(label: str, id: str, options: list) -> html.Div:
+    """Dropdown element for option selection.
+
+    Args:
+        label: The title that goes above the dropdown.
+        id: A unique selector for this element.
+        options: A list of dictionaries of labels and values.
+    """
+    return html.Div(
+        className="dropdown-wrapper",
+        children=[
+            html.Label(label, htmlFor=id),
+            dmc.Select(
+                id=id,
+                data=options,
+                value=options[0]["value"],
+                allowDeselect=False,
             ),
         ],
     )
 
 
-def generate_options(options_list: list) -> list[dict]:
-    """Generates options for dropdowns, checklists, radios, etc."""
-    return [{"label": label, "value": i} for i, label in enumerate(options_list)]
+def checklist(label: str, id: str, options: list, values: list, inline: bool = True) -> html.Div:
+    """Checklist element for option selection.
+
+    Args:
+        label: The title that goes above the checklist.
+        id: A unique selector for this element.
+        options: A list of dictionaries of labels and values.
+        values: A list of values that should be preselected in the checklist.
+        inline: Whether the options of the checklist are displayed beside or below each other.
+    """
+    return html.Div(
+        className="checklist-wrapper",
+        children=[
+            dmc.CheckboxGroup(
+                id=id,
+                className=f"checklist{' checklist--inline' if inline else ''}",
+                label=label,
+                value=values,
+                children=dmc.Group(
+                    [
+                        dmc.Checkbox(label=option["label"], value=option["value"], color=THEME_COLOR)
+                        for option in options
+                    ],
+                ),
+            ),
+        ],
+    )
+
+
+def input(label: str, id: str, configs: dict, type: str="number") -> html.Div:
+    """Input element for either text or number input.
+
+    Args:
+        label: The title that goes above the input.
+        id: A unique selector for this element.
+        configs: A dictionary of configurations for the input element.
+        type: The type of input, either "number" or "text".
+    """
+    return html.Div(
+        className="input-wrapper",
+        children=[
+            html.Label(label, htmlFor=id),
+            dmc.TextInput(
+                id=id,
+                **configs,
+            ) if type == "text" else dmc.NumberInput(
+                id=id,
+                **configs,
+            ),
+        ],
+    )
+
+
+def generate_options(options: list | EnumMeta | dict) -> list[dict]:
+    """Format options for dropdowns, checklists, radios, etc.
+
+    Args:
+        options: A list, EnumMeta, or dictionary of options to format.
+
+    Returns:
+        A list of dictionaries with "label" and "value" keys for each option.
+    """
+    if isinstance(options, EnumMeta):
+        return [{"label": option.label, "value": f"{option.value}"} for option in options]
+
+    if isinstance(options, dict):
+        return [{"label": f"{key}", "value": f"{value}"} for key, value in options.items()]
+
+    return [{"label": f"{option}", "value": f"{option}"} for option in options]
 
 
 def generate_settings_form() -> html.Div:
@@ -98,18 +196,14 @@ def generate_settings_form() -> html.Div:
 
     return html.Div(
         className="settings",
-        id="control-card",
         children=[
             html.Div(
                 children=[
-                    html.Label("Presets (sets sliders below)"),
-                    dcc.Dropdown(
-                        id="example-scenario-select",
-                        options=example_scenario,
-                        value=example_scenario[0]["value"],
-                        clearable=False,
-                        searchable=False,
-                    ),
+                    dropdown(
+                        "Presets (sets sliders below)",
+                        "example-scenario-select",
+                        example_scenario,
+                    )
                 ]
             ),
             slider(
@@ -139,6 +233,7 @@ def generate_settings_form() -> html.Div:
                             html.Label("Advanced settings"),
                             html.Div(className="collapse-arrow"),
                         ],
+                        **{"aria-expanded": "false"},
                     ),
                     html.Div(
                         className="details-to-collapse part-time-collapse",
@@ -153,13 +248,12 @@ def generate_settings_form() -> html.Div:
                                 "shifts-per-employee-select",
                                 MIN_MAX_SHIFTS,
                             ),
-                            dcc.Checklist(
-                                options=[
-                                    {"label": "Allow isolated days off", "value": 0},
-                                ],
-                                value=[],
-                                id="checklist-input",
-                            ),
+                            checklist(
+                                "",
+                                "checklist-input",
+                                [{"label": "Allow isolated days off", "value": 0}],
+                                [],
+                            )
                         ],
                     ),
                 ],
@@ -169,16 +263,16 @@ def generate_settings_form() -> html.Div:
 
 
 def generate_run_buttons() -> html.Div:
-    """Run and cancel buttons to run the optimization."""
+    """Generate run and cancel buttons to run the optimization."""
     return html.Div(
         id="button-group",
         children=[
-            html.Button(id="run-button", children="Run Optimization", n_clicks=0, disabled=False),
+            html.Button("Run Optimization", id="run-button", className="button"),
             html.Button(
+                "Cancel Optimization",
                 id="cancel-button",
-                children="Cancel Optimization",
-                n_clicks=0,
-                className="display-none",
+                className="button",
+                style={"display": "none"},
             ),
         ],
     )
@@ -215,11 +309,54 @@ def generate_forecast_table(forecast: list, scheduled: dict) -> html.Div:
     )
 
 
-def create_interface():
-    """Set the application HTML."""
+def errors_list(errors: dict) -> html.Div:
+    """Creates html list of errors."""
+    error_lists = []
+    error_counter = 0
+    for error_key, error_list in errors.items():
+        error_lists.append(
+            html.Div(
+                id={
+                    "type": "to-collapse-class",
+                    "index": 4 + error_counter,
+                },
+                className="details-collapse-wrapper collapsed",
+                children=[
+                    html.Button(
+                        id={
+                            "type": "collapse-trigger",
+                            "index": 4 + error_counter,
+                        },
+                        className="details-collapse",
+                        children=[
+                            html.H6(error_key),
+                            html.Div(className="collapse-arrow"),
+                        ],
+                        **{"aria-expanded": "true"},
+                    ),
+                    html.Div(
+                        className="details-to-collapse",
+                        children=[html.Ul([html.Li(error) for error in error_list])],
+                    ),
+                ],
+            )
+        )
+        error_counter += 1
+    return html.Div([html.H4("The following constraints were not satisfied:"), *error_lists])
+
+
+def create_interface() -> html.Div:
+    """Create the main application interface."""
     return html.Div(
         id="app-container",
         children=[
+            html.A(  # Skip link for accessibility
+                "Skip to main content",
+                href="#main-content",
+                id="skip-to-main",
+                className="skip-link",
+                tabIndex=1,
+            ),
             dcc.Store(
                 id="custom-saved-data",
                 data={
@@ -230,11 +367,10 @@ def create_interface():
                 }
             ),
             dcc.Store(id="submission_indicator"),
-            # Header brand banner
-            html.Div(className="banner", children=[html.Img(src=THUMBNAIL)]),
             # Settings and results columns
-            html.Div(
+            html.Main(
                 className="columns-main",
+                id="main-content",
                 children=[
                     # Left column
                     html.Div(
@@ -247,21 +383,46 @@ def create_interface():
                                     html.Div(
                                         className="left-column-layer-2",  # Padding and content wrapper
                                         children=[
-                                            html.H1(MAIN_HEADER),
-                                            html.P(DESCRIPTION),
-                                            generate_settings_form(),
-                                            generate_run_buttons(),
+                                            html.Div(
+                                                [
+                                                    html.H1(MAIN_HEADER),
+                                                    html.P(DESCRIPTION),
+                                                ],
+                                                className="title-section",
+                                            ),
+                                            html.Div(
+                                                [
+                                                    html.Div(
+                                                        html.Div(
+                                                            [
+                                                                generate_settings_form(),
+                                                                generate_run_buttons(),
+                                                            ],
+                                                            className="settings-and-buttons",
+                                                        ),
+                                                        className="settings-and-buttons-wrapper",
+                                                    ),
+                                                    # Left column collapse button
+                                                    html.Div(
+                                                        html.Button(
+                                                            id={
+                                                                "type": "collapse-trigger",
+                                                                "index": 0,
+                                                            },
+                                                            className="left-column-collapse",
+                                                            title="Collapse sidebar",
+                                                            children=[
+                                                                html.Div(className="collapse-arrow")
+                                                            ],
+                                                            **{"aria-expanded": "true"},
+                                                        ),
+                                                    ),
+                                                ],
+                                                className="form-section",
+                                            ),
                                         ],
                                     )
                                 ],
-                            ),
-                            # Left column collapse button
-                            html.Div(
-                                html.Button(
-                                    id={"type": "collapse-trigger", "index": 0},
-                                    className="left-column-collapse",
-                                    children=[html.Div(className="collapse-arrow")],
-                                ),
                             ),
                         ],
                     ),
@@ -269,15 +430,35 @@ def create_interface():
                     html.Div(
                         className="right-column",
                         children=[
-                            dcc.Tabs(
+                            dmc.Tabs(
                                 id="tabs",
                                 value="input-tab",
+                                color="white",
                                 children=[
-                                    dcc.Tab(
-                                        label="Availability",
-                                        id="input-tab",
-                                        value="input-tab",  # used for switching to programatically
-                                        className="tab",
+                                    html.Header(
+                                        className="banner",
+                                        children=[
+                                            html.Nav(
+                                                [
+                                                    dmc.TabsList(
+                                                        [
+                                                            dmc.TabsTab("Availability", value="input-tab"),
+                                                            dmc.TabsTab(
+                                                                "Scheduled Shifts",
+                                                                value="schedule-tab",
+                                                                id="schedule-tab",
+                                                                disabled=True,
+                                                            ),
+                                                        ]
+                                                    ),
+                                                ]
+                                            ),
+                                            html.Img(src=THUMBNAIL, alt="D-Wave logo"),
+                                        ],
+                                    ),
+                                    dmc.TabsPanel(
+                                        value="input-tab",
+                                        tabIndex="12",
                                         children=[
                                             html.Div(
                                                 className="schedule",
@@ -331,11 +512,9 @@ def create_interface():
                                             ),
                                         ],
                                     ),
-                                    dcc.Tab(
-                                        label="Scheduled Shifts",
-                                        id="schedule-tab",
-                                        value="schedule-tab",  # used for switching to programatically
-                                        className="tab",
+                                    dmc.TabsPanel(
+                                        value="schedule-tab",
+                                        tabIndex="13",
                                         children=[
                                             html.Div(
                                                 className="schedule",
@@ -378,7 +557,6 @@ def create_interface():
                                                 ],
                                             )
                                         ],
-                                        disabled=True,
                                     ),
                                 ],
                             )
@@ -393,6 +571,7 @@ def create_interface():
                                 id={"type": "collapse-trigger", "index": 1},
                                 className="log-column-collapse",
                                 children=[html.Div(className="collapse-arrow")],
+                                **{"aria-expanded": "false"},
                             ),
                             html.Div([html.Div(id="errors")]),
                         ],
@@ -401,38 +580,3 @@ def create_interface():
             ),
         ],
     )
-
-
-def errors_list(errors: dict) -> html.Div:
-    """Creates html list of errors."""
-    error_lists = []
-    error_counter = 0
-    for error_key, error_list in errors.items():
-        error_lists.append(
-            html.Div(
-                id={
-                    "type": "to-collapse-class",
-                    "index": 4 + error_counter,
-                },
-                className="details-collapse-wrapper collapsed",
-                children=[
-                    html.Button(
-                        id={
-                            "type": "collapse-trigger",
-                            "index": 4 + error_counter,
-                        },
-                        className="details-collapse",
-                        children=[
-                            html.H6(error_key),
-                            html.Div(className="collapse-arrow"),
-                        ],
-                    ),
-                    html.Div(
-                        className="details-to-collapse",
-                        children=[html.Ul([html.Li(error) for error in error_list])],
-                    ),
-                ],
-            )
-        )
-        error_counter += 1
-    return html.Div([html.H4("The following constraints were not satisfied:"), *error_lists])

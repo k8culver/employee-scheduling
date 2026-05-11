@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import math
+from typing import NamedTuple
 
 import dash
 import pandas as pd
@@ -34,28 +35,34 @@ from demo_interface import errors_list, generate_forecast_table
 
 
 @dash.callback(
-    Output({"type": "to-collapse-class", "index": MATCH}, "className", allow_duplicate=True),
+    Output({"type": "to-collapse-class", "index": MATCH}, "className"),
+    Output({"type": "collapse-trigger", "index": MATCH}, "aria-expanded"),
     inputs=[
         Input({"type": "collapse-trigger", "index": MATCH}, "n_clicks"),
         State({"type": "to-collapse-class", "index": MATCH}, "className"),
     ],
     prevent_initial_call=True,
 )
-def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
+def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> tuple[str, str]:
     """Toggles a 'collapsed' class that hides and shows some aspect of the UI.
 
     Args:
-        collapse_trigger (int): The (total) number of times a collapse button has been clicked.
-        to_collapse_class (str): Current class name of the thing to collapse, 'collapsed' if not visible, empty string if visible
+        collapse_trigger: The (total) number of times a collapse button has been clicked.
+        to_collapse_class: Current class name of the thing to collapse, 'collapsed' if not
+            visible, empty string if visible.
 
     Returns:
-        str: The new class name of the thing to collapse.
+        A tuple containing:
+
+        - str: The new class name of the thing to collapse.
+        - str: The aria-expanded value.
     """
+
     classes = to_collapse_class.split(" ") if to_collapse_class else []
     if "collapsed" in classes:
         classes.remove("collapsed")
-        return " ".join(classes)
-    return to_collapse_class + " collapsed" if to_collapse_class else "collapsed"
+        return " ".join(classes), "true"
+    return to_collapse_class + " collapsed" if to_collapse_class else "collapsed", "false"
 
 
 @dash.callback(
@@ -84,14 +91,16 @@ def set_scenario(
         custom_saved_data: The saved custom scenario data to update.
 
     Returns:
-        num-employees-select: The number of employees.
-        num-full-time-select: The number of full-time employees.
-        consecutive-shifts-select: The max consecutive shifts to schedule for a part-time employee.
-        shifts-per-employee-select: The min/max shifts to schedule for each part-time employee.
-        num-employees-select-disabled: Whether to disable the number of employees setting.
-        num-full-time-select-disabled: Whether to disable the full-time employees setting.
-        consecutive-shifts-select-disabled: Whether to disable the max consecutive shifts setting.
-        shifts-per-employee-select-disabled: Whether to disable the min/max shifts setting.
+        A tuple containing:
+
+        - int: The number of employees.
+        - int: The number of full-time employees.
+        - int: The max consecutive shifts to schedule for a part-time employee.
+        - list[int]: The min/max shifts to schedule for each part-time employee.
+        - bool: Whether to disable the number of employees setting.
+        - bool: Whether to disable the full-time employees setting.
+        - bool: Whether to disable the max consecutive shifts setting.
+        - bool: Whether to disable the min/max shifts setting.
     """
     if scenario == 0:
         # return custom stored selections
@@ -132,7 +141,7 @@ def custom_saved_data(
         custom_saved_data: The saved custom scenario data to update.
 
     Returns:
-        custom-saved-data: The saved custom scenario data to update.
+        The updated custom scenario data.
     """
     if scenario == 0:
         custom_saved_data.update({ctx.triggered_id: ctx.triggered[0]["value"]})
@@ -141,18 +150,34 @@ def custom_saved_data(
     raise PreventUpdate
 
 
+class DisplayInitialScheduleReturn(NamedTuple):
+    """Return type for the ``display_initial_schedule`` callback function."""
+
+    availability_content: pd.DataFrame
+    schedule_content: pd.DataFrame
+    forecast_values: list[dict]
+    forecast_placeholders: list[dict]
+    forecast_max: list[dict]
+    full_time_max: int
+    full_time_marks: dict
+    full_time_value: int
+    schedule_tab_disabled: bool = True # disable the schedule tab when changing parameters
+    selected_tab: str = "input-tab" # jump back to the availability tab
+    errors_tab_style: dict = {"display": "none"}
+
+
 @dash.callback(
     Output("availability-content", "children"),
     Output("schedule-content", "children"),
-    Output("schedule-tab", "disabled"),
-    Output("tabs", "value"),
-    Output({"type": "to-collapse-class", "index": 1}, "style"),
     Output({"type": "forecast", "index": ALL}, "value"),
     Output({"type": "forecast", "index": ALL}, "placeholder"),
     Output({"type": "forecast", "index": ALL}, "max"),
     Output("num-full-time-select", "max"),
     Output("num-full-time-select", "marks"),
     Output("num-full-time-select", "value"),
+    Output("schedule-tab", "disabled"),
+    Output("tabs", "value"),
+    Output({"type": "to-collapse-class", "index": 1}, "style"),
     inputs=[
         Input("num-employees-select", "value"),
         Input("num-full-time-select", "value"),
@@ -160,7 +185,7 @@ def custom_saved_data(
 )
 def display_initial_schedule(
     num_employees: int, num_full_time: int
-) -> tuple[pd.DataFrame, pd.DataFrame, bool, str, dict, list[dict]]:
+) -> DisplayInitialScheduleReturn:
     """Display initial availability schedule.
 
     Display initial schedule in, and switch to, the availability
@@ -171,23 +196,24 @@ def display_initial_schedule(
         num_full_time: The number of full-time employees.
 
     Returns:
-        availability-content: The availability tab content.
-        schedule-content: The schedule tab content.
-        schedule-tab-disabled: Whether the schedule tab should be disabled.
-        tabs-value: The tab that should be selected.
-        to-collapse-class-style: The style for the errors tab.
-        forecast: The forecasted employees per shift requirements value.
-        forecast: The forecasted employees per shift requirements placeholder.
-        forecast: The forecasted employees per shift requirements max.
-        num-full-time-select-max: The max to set the full-time select to.
-        num-full-time-select-marks: The marks to set for the full-time select.
-        num-full-time-select-value: The value to set for the full-time select.
+        A NamedTuple, DisplayInitialScheduleReturn, containing:
+
+        - availability_content: The availability tab content.
+        - schedule_content: The schedule tab content.
+        - forecast_values: The forecasted employees per shift requirements value.
+        - forecast_placeholders: The forecasted employees per shift requirements placeholder.
+        - forecast_max: The forecasted employees per shift requirements max.
+        - full_time_max: The max to set the full-time select to.
+        - full_time_marks: The marks to set for the full-time select.
+        - full_time_value: The value to set for the full-time select.
+        - schedule_tab_disabled: Whether the schedule tab should be disabled.
+        - selected_tab: The tab that should be selected.
+        - errors_tab_style: The style for the errors tab.
     """
     new_full_time_max = math.floor(num_employees * 3 / 4)
-    full_time_marks = {
-        NUM_FULL_TIME["min"]: str(NUM_FULL_TIME["min"]),
-        new_full_time_max: str(new_full_time_max),
-    }
+    full_time_marks = [
+        {"value": mark, "label": f'{mark}'} for mark in [NUM_FULL_TIME["min"], new_full_time_max]
+    ]
     num_full_time = min(num_full_time, new_full_time_max)
 
     df = utils.build_random_sched(num_employees, num_full_time)
@@ -200,23 +226,20 @@ def display_initial_schedule(
     num_part_time = num_employees - num_full_time
     count = [value + math.ceil(num_part_time / 2) for value in count.values()]
 
-    return (
-        init_availability_table,
-        init_availability_table,
-        True,  # disable the shedule tab when changing parameters
-        "input-tab",  # jump back to the availability tab
-        {"display": "none"},
-        count,
-        count,
-        [num_employees]*len(count),
-        new_full_time_max,
-        full_time_marks,
-        num_full_time
+    return DisplayInitialScheduleReturn(
+        availability_content=init_availability_table,
+        schedule_content=init_availability_table,
+        forecast_values=count,
+        forecast_placeholders=count,
+        forecast_max=[num_employees]*len(count),
+        full_time_max=new_full_time_max,
+        full_time_marks=full_time_marks,
+        full_time_value=num_full_time
     )
 
 
 @dash.callback(
-    Output({"type": "to-collapse-class", "index": 1}, "className"),
+    Output({"type": "to-collapse-class", "index": 1}, "className", allow_duplicate=True),
     Output("scheduled-forecast-output", "children"),
     inputs=[
         Input("run-button", "n_clicks"),
@@ -232,8 +255,10 @@ def update_ui_on_run(run_click: int, prev_classes: str) -> tuple[str, list]:
         prev_classes: A string containing all the previous classes of the error sidebar.
 
     Returns:
-        to-collapse-class-className: The class names for the errors sidebar.
-        scheduled-forecast-output: The forecasted and scheduled difference per shift.
+        A tuple containing:
+
+        - str: The class names for the errors sidebar.
+        - list: The forecasted and scheduled difference per shift.
     """
     classes = prev_classes.split(" ") if prev_classes else []
 
@@ -261,8 +286,8 @@ def update_ui_on_run(run_click: int, prev_classes: str) -> tuple[str, list]:
     ],
     running=[
         # show cancel button and hide run button, and disable and animate results tab
-        (Output("cancel-button", "className"), "", "display-none"),  # Show/hide cancel button.
-        (Output("run-button", "className"), "display-none", ""),  # Hides run button while running.
+        (Output("cancel-button", "style"), {}, {"display": "none"}),  # Show/hide cancel button.
+        (Output("run-button", "style"), {"display": "none"}, {}),  # Hides run button while running.
         # switch to schedule tab while running
         (Output("schedule-tab", "disabled"), False, False),
         (Output("tabs", "value"), "schedule-tab", "schedule-tab"),
@@ -301,10 +326,10 @@ def run_optimization(
         A tuple containing all outputs to be used when updating the HTML
         template (in ``demo_interface.py``). These are:
 
-            schedule-content: The completed schedule.
-            to-collapse-class-style: Whether to show the errors sidebar or not.
-            errors: The errors to include in the sidebar.
-            scheduled-forecast-output: The forecasted and scheduled difference per shift.
+        - pd.DataFrame: The completed schedule.
+        - dict: Whether to show the errors sidebar or not.
+        - list: The errors to include in the sidebar.
+        - list: The forecasted and scheduled difference per shift.
     """
     if run_click == 0 or ctx.triggered_id != "run-button":
         raise PreventUpdate
