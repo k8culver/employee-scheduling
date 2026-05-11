@@ -21,7 +21,6 @@ import dash_mantine_components as dmc
 
 from demo_configs import (
     DESCRIPTION,
-    EXAMPLE_SCENARIO,
     MAIN_HEADER,
     MAX_CONSECUTIVE_SHIFTS,
     MIN_MAX_SHIFTS,
@@ -31,6 +30,7 @@ from demo_configs import (
     THUMBNAIL,
     UNAVAILABLE_ICON,
 )
+from src.demo_enums import ScenarioType
 from src.utils import COL_IDS
 
 THEME_COLOR = "#2d4376"
@@ -115,31 +115,23 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
     )
 
 
-def checklist(label: str, id: str, options: list, values: list, inline: bool = True) -> html.Div:
-    """Checklist element for option selection.
+def checkbox(label: str, id: str, checked: bool) -> html.Div:
+    """Checkbox element.
 
     Args:
-        label: The title that goes above the checklist.
+        label: The title that goes above the checkbox.
         id: A unique selector for this element.
-        options: A list of dictionaries of labels and values.
-        values: A list of values that should be preselected in the checklist.
-        inline: Whether the options of the checklist are displayed beside or below each other.
+        checked: Whether the checkbox is checked or not.
     """
     return html.Div(
-        className="checklist-wrapper",
+        className="checkbox-wrapper",
         children=[
-            dmc.CheckboxGroup(
+            dmc.Checkbox(
                 id=id,
-                className=f"checklist{' checklist--inline' if inline else ''}",
                 label=label,
-                value=values,
-                children=dmc.Group(
-                    [
-                        dmc.Checkbox(label=option["label"], value=option["value"], color=THEME_COLOR)
-                        for option in options
-                    ],
-                ),
-            ),
+                checked=checked,
+                color=THEME_COLOR,
+            )
         ],
     )
 
@@ -156,7 +148,7 @@ def input(label: str, id: str, configs: dict, type: str="number") -> html.Div:
     return html.Div(
         className="input-wrapper",
         children=[
-            html.Label(label, htmlFor=id),
+            html.Label(label, htmlFor=str(id)),
             dmc.TextInput(
                 id=id,
                 **configs,
@@ -192,7 +184,7 @@ def generate_settings_form() -> html.Div:
     Returns:
         html.Div: A Div containing the settings for selecting the scenario, model, and solver.
     """
-    example_scenario = generate_options(EXAMPLE_SCENARIO)
+    example_scenario = generate_options(ScenarioType)
 
     return html.Div(
         className="settings",
@@ -201,7 +193,7 @@ def generate_settings_form() -> html.Div:
                 children=[
                     dropdown(
                         "Presets (sets sliders below)",
-                        "example-scenario-select",
+                        "scenario-select",
                         example_scenario,
                     )
                 ]
@@ -248,11 +240,10 @@ def generate_settings_form() -> html.Div:
                                 "shifts-per-employee-select",
                                 MIN_MAX_SHIFTS,
                             ),
-                            checklist(
-                                "",
+                            checkbox(
+                                "Allow isolated days off",
                                 "checklist-input",
-                                [{"label": "Allow isolated days off", "value": 0}],
-                                [],
+                                False,
                             )
                         ],
                     ),
@@ -461,55 +452,60 @@ def create_interface() -> html.Div:
                                         tabIndex="12",
                                         children=[
                                             html.Div(
-                                                className="schedule",
+                                                className="tab-content-wrapper",
                                                 children=[
                                                     html.Div(
-                                                        className="schedule-inner",
+                                                        className="schedule",
                                                         children=[
-                                                            html.Div(id="availability-content"),
                                                             html.Div(
-                                                                className="schedule-forecast schedule-forecast-input",
+                                                                className="schedule-inner",
                                                                 children=[
-                                                                    html.Label("Staffing Requirements:"),
+                                                                    html.Div(id="availability-content"),
                                                                     html.Div(
-                                                                        [
-                                                                            dcc.Input(
-                                                                                id={"index": param, "type": "forecast"},
-                                                                                type="number",
-                                                                                debounce=True,
-                                                                                value=0,
-                                                                                min=0,
-                                                                                max=100,
-                                                                                required=True,
-                                                                            ) for param in COL_IDS
+                                                                        className="schedule-forecast schedule-forecast-input",
+                                                                        children=[
+                                                                            html.Label("Staffing Requirements:"),
+                                                                            html.Div(
+                                                                                [
+                                                                                    dcc.Input(
+                                                                                        id={"index": param, "type": "forecast"},
+                                                                                        type="number",
+                                                                                        debounce=True,
+                                                                                        value=0,
+                                                                                        min=0,
+                                                                                        max=100,
+                                                                                        required=True,
+                                                                                    ) for param in COL_IDS
+                                                                                ],
+                                                                                id="forecast-input"
+                                                                            )
                                                                         ],
-                                                                        id="forecast-input"
-                                                                    )
+                                                                    ),
+                                                                ],
+                                                            ),
+                                                            html.Div(
+                                                                className="legend",
+                                                                children=[
+                                                                    html.Div([
+                                                                        html.Div(
+                                                                            className="requested-shifts",
+                                                                            children=[REQUESTED_SHIFT_ICON],
+                                                                        ),
+                                                                        html.Label("Requested"),
+                                                                    ]),
+                                                                    html.Div([
+                                                                        html.Div(
+                                                                            className="unavailable-shifts",
+                                                                            children=[UNAVAILABLE_ICON],
+                                                                        ),
+                                                                        html.Label("Unavailable"),
+                                                                    ]),
                                                                 ],
                                                             ),
                                                         ],
                                                     ),
-                                                    html.Div(
-                                                        className="legend",
-                                                        children=[
-                                                            html.Div([
-                                                                html.Div(
-                                                                    className="requested-shifts",
-                                                                    children=[REQUESTED_SHIFT_ICON],
-                                                                ),
-                                                                html.Label("Requested"),
-                                                            ]),
-                                                            html.Div([
-                                                                html.Div(
-                                                                    className="unavailable-shifts",
-                                                                    children=[UNAVAILABLE_ICON],
-                                                                ),
-                                                                html.Label("Unavailable"),
-                                                            ]),
-                                                        ],
-                                                    ),
-                                                ],
-                                            ),
+                                                ]
+                                            )
                                         ],
                                     ),
                                     dmc.TabsPanel(
@@ -517,44 +513,49 @@ def create_interface() -> html.Div:
                                         tabIndex="13",
                                         children=[
                                             html.Div(
-                                                className="schedule",
+                                                className="tab-content-wrapper",
                                                 children=[
-                                                    dcc.Loading(
-                                                        id="loading",
-                                                        type="circle",
-                                                        color="#2A7DE1",
-                                                        parent_className="schedule-loading",
-                                                        children=html.Div(
-                                                            [
-                                                                html.Div(id="schedule-content"),
-                                                                html.Div(
-                                                                    className="schedule-forecast",
-                                                                    id="scheduled-forecast-output",
-                                                                ),
-                                                            ]
-                                                        ),
-                                                    ),
                                                     html.Div(
-                                                        className="legend",
+                                                        className="schedule",
                                                         children=[
-                                                            html.Div([
-                                                                html.Div(className="scheduled-shifts"),
-                                                                html.Label("Scheduled"),
-                                                            ]),
-                                                            html.Div([
-                                                                html.Div(
-                                                                    className="unscheduled-requested-shifts",
-                                                                    children=[REQUESTED_SHIFT_ICON],
+                                                            dcc.Loading(
+                                                                id="loading",
+                                                                type="circle",
+                                                                color="#2A7DE1",
+                                                                parent_className="schedule-loading",
+                                                                children=html.Div(
+                                                                    [
+                                                                        html.Div(id="schedule-content"),
+                                                                        html.Div(
+                                                                            className="schedule-forecast",
+                                                                            id="scheduled-forecast-output",
+                                                                        ),
+                                                                    ]
                                                                 ),
-                                                                html.Label("Unscheduled requested"),
-                                                            ]),
-                                                            html.Div([
-                                                                html.Div(UNAVAILABLE_ICON),
-                                                                html.Label("Unavailable"),
-                                                            ]),
+                                                            ),
+                                                            html.Div(
+                                                                className="legend",
+                                                                children=[
+                                                                    html.Div([
+                                                                        html.Div(className="scheduled-shifts"),
+                                                                        html.Label("Scheduled"),
+                                                                    ]),
+                                                                    html.Div([
+                                                                        html.Div(
+                                                                            className="unscheduled-requested-shifts",
+                                                                            children=[REQUESTED_SHIFT_ICON],
+                                                                        ),
+                                                                        html.Label("Unscheduled requested"),
+                                                                    ]),
+                                                                    html.Div([
+                                                                        html.Div(UNAVAILABLE_ICON),
+                                                                        html.Label("Unavailable"),
+                                                                    ]),
+                                                                ],
+                                                            ),
                                                         ],
                                                     ),
-                                                ],
+                                                ]
                                             )
                                         ],
                                     ),

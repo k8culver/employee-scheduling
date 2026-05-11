@@ -66,9 +66,6 @@ MAX_CONSECUTIVE_SHIFTS = {
     "value": 5,
 }
 
-# example scenario labels (must have 4, first is custom scenario)
-EXAMPLE_SCENARIO = ["Custom", "Small", "Medium", "Large"]
-
 # default scenarios (don't change order of items)
 SMALL_SCENARIO = {
     "num_employees": 12,

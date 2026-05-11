@@ -14,6 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+.tab-content-wrapper {
+    padding: 1rem 3rem 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    overflow-x: auto;
+}
+
 h6 {
     font-size: 1rem;
     font-weight: 400;
@@ -31,26 +40,12 @@ h6 {
     border-width: 2px;
 }
 
-.columns-main {
-    height: calc(100vh - var(--banner-height));
-}
-
-.right-column {
-    flex-grow: 1;
-    min-width: 25rem;
-}
-
 .collapsed.log-column > div {
     width: 0;
 }
 
 table {
     border: none;
-}
-
-.tab-content {
-    padding: 1.5rem 1.5rem 0;
-    overflow-x: auto;
 }
 
 .log-column {
@@ -89,6 +84,12 @@ table {
 #availability-content,
 #schedule-content {
     padding-bottom: 1rem;
+    height: calc(100vh - var(--banner-height) - 5rem);
+    overflow-y: auto;
+}
+
+#schedule-content {
+    height: calc(100vh - var(--banner-height) - 9rem);
 }
 
 /* Specific targeting for the loading circle */
@@ -152,6 +153,7 @@ table {
   margin-right: 0.25rem;
   text-align: center;
   font-size: 1.125rem;
+  font-weight: 600;
   border: 1px solid var(--grey-light);
 }
 
@@ -188,11 +190,14 @@ td[data-dash-column="Employee"] {
   padding-left: 0.75rem !important;
   padding-right: 0.75rem !important;
   border-right: 2px solid var(--grey-medium) !important;
+  font-size: 1rem;
+  line-height: 1rem;
 }
 
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td:not([data-dash-column="Employee"]) div {
   font-size: 1.125rem;
   vertical-align: baseline;
+  font-weight: 600;
 }
 
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th.dash-header {
@@ -252,29 +257,33 @@ tr:not(:first-child) .dash-header.column-14 {
 }
 
 .part-time-settings label {
-    color: var(--theme);
     letter-spacing: normal;
     text-transform: uppercase;
-    font-size: 0.75rem;
+    font-size: 0.825rem;
     font-weight: 600;
     cursor: pointer;
 }
 
+.details-collapse.part-time-settings .collapse-arrow:before,
+.details-collapse.part-time-settings .collapse-arrow:after {
+    height: 0.2rem;
+    width: 1rem;
+}
+
 .details-collapse.part-time-settings .collapse-arrow {
-    margin-top: 1.125rem;
-    border-width: 3px;
-    height: 0.75rem;
-    width: 0.75rem;
+    margin-top: 2rem;
+    height: 1rem;
+    margin-left: 0;
 }
 
 .collapsed .details-collapse.part-time-settings .collapse-arrow {
-    margin-top: 1.125rem;
+    margin-top: 0;
 }
 
 .part-time-collapse {
     background: white;
     padding: 0 0.75rem 0.75rem;
-    border: 1px solid var(--grey-light);
+    border-radius: 20px;
 }
 
 .details-collapse-wrapper.collapsed .part-time-collapse {
@@ -290,6 +299,7 @@ tr:not(:first-child) .dash-header.column-14 {
 .schedule-forecast {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     position: sticky;
     bottom: 0;
     background-color: white;
@@ -306,13 +316,9 @@ tr:not(:first-child) .dash-header.column-14 {
 }
 
 .schedule-forecast label {
-    margin: 0.25rem 0.25rem 0.5rem;
-    font-weight: 500;
-    font-size: 1rem;
-}
-
-.schedule-forecast-input label {
     margin-top: 1rem;
+    font-size: 0.95rem;
+    margin: 0.35rem 0;
 }
 
 .schedule-forecast tr:last-child,
@@ -337,7 +343,7 @@ tr:not(:first-child) .dash-header.column-14 {
 
 .dash-input {
     width: 2.5rem;
-    margin: 0.75rem 0.25rem;
+    margin: 0.75rem 0.175rem;
 }
 
 /* This and the following rule hide the up/down arrows for the text box */

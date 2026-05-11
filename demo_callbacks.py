@@ -21,6 +21,7 @@ import pandas as pd
 from dash import ALL, MATCH, Input, Output, State, ctx
 from dash.exceptions import PreventUpdate
 
+from src.demo_enums import ScenarioType
 import src.employee_scheduling as employee_scheduling
 import src.utils as utils
 from demo_configs import (
@@ -75,7 +76,7 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> tuple[s
     Output("consecutive-shifts-select", "disabled"),
     Output("shifts-per-employee-select", "disabled"),
     inputs=[
-        Input("example-scenario-select", "value"),
+        Input("scenario-select", "value"),
         State("custom-saved-data", "data"),
     ],
     prevent_initial_call=True,
@@ -102,12 +103,14 @@ def set_scenario(
         - bool: Whether to disable the max consecutive shifts setting.
         - bool: Whether to disable the min/max shifts setting.
     """
-    if scenario == 0:
+    scenario = ScenarioType(int(scenario))
+
+    if scenario is ScenarioType.CUSTOM:
         # return custom stored selections
         return *custom_saved_data.values(), False, False, False, False
 
     scenarios = [SMALL_SCENARIO, MEDIUM_SCENARIO, LARGE_SCENARIO]
-    return *tuple(scenarios[scenario - 1].values()), True, True, True, True
+    return *tuple(scenarios[scenario.value - 1].values()), True, True, True, True
 
 
 @dash.callback(
@@ -117,7 +120,7 @@ def set_scenario(
         Input("num-full-time-select", "value"),
         Input("consecutive-shifts-select", "value"),
         Input("shifts-per-employee-select", "value"),
-        State("example-scenario-select", "value"),
+        State("scenario-select", "value"),
         State("custom-saved-data", "data"),
     ],
     prevent_initial_call=True,
@@ -143,7 +146,9 @@ def custom_saved_data(
     Returns:
         The updated custom scenario data.
     """
-    if scenario == 0:
+    scenario = ScenarioType(int(scenario))
+
+    if scenario is ScenarioType.CUSTOM:
         custom_saved_data.update({ctx.triggered_id: ctx.triggered[0]["value"]})
         return custom_saved_data
 
